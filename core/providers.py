@@ -23,8 +23,7 @@ import os
 
 from livekit.plugins.openai import LLM
 from core.providers_registry.stt.gipformer_stt import GipformerSTT
-from core.providers_registry.tts.custom_tts import ModalTTS  # original
-from core.providers_registry.tts.gtts_tts import GoogleTTS  # temporary
+from core.providers_registry.tts.custom_tts import PaiEasTTS
 
 
 def make_llm():
@@ -40,15 +39,12 @@ def make_stt():
 
 
 def make_tts():
-    # --- Original ModalTTS (uncomment to restore) ---
-    return ModalTTS(
-        url="https://nguyentatchien0122--omnivoice-omnivoiceservice-api.modal.run",
-        stream_url="https://nguyentatchien0122--omnivoice-omnivoiceservice-stream-api.modal.run",
+    # --- PAI-EAS TTS (Alibaba Cloud) ---
+    return PaiEasTTS(
+        # URL configured via PAI_EAS_TTS_URL and PAI_EAS_TTS_STREAM_URL env vars
         voice_id="shinhan_voice",
         language="vi",
         instruct="female,Very Low Pitch",
         num_step_first=16,
         num_step=32,
     )
-    # --- Temporary gTTS ---
-    # return GoogleTTS(language="vi")

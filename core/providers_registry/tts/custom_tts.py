@@ -1,16 +1,16 @@
 """
-modal_tts.py — LiveKit Agents TTS plugin cho Modal OmniVoice
+pai_eas_tts.py — LiveKit Agents TTS plugin for Alibaba Cloud PAI-EAS OmniVoice
 
-Gọi Modal-deployed OmniVoice endpoint, nhận raw int16 PCM stream,
-phát thẳng sang LiveKit không cần bước decode trung gian.
+Calls PAI-EAS deployed OmniVoice endpoint, receives raw int16 PCM stream,
+and plays directly to LiveKit without intermediate decoding.
 
-Yêu cầu:
+Requirements:
     pip install aiohttp livekit-agents python-dotenv
 
-Dùng:
-    from modal_tts import ModalTTS
+Usage:
+    from custom_tts import PaiEasTTS
 
-    tts_plugin = ModalTTS(
+    tts_plugin = PaiEasTTS(
         voice_id="shinhan_voice",
         language="vi",
         instruct="female,Very Low Pitch",
@@ -19,7 +19,7 @@ Dùng:
     )
     session = AgentSession(tts=tts_plugin, ...)
 
-Reset first-sentence flag khi agent bắt đầu trả lời mới:
+Reset first-sentence flag when agent starts a new response:
 
     @session.on("agent_state_changed")
     def _on_state_changed(ev):
@@ -29,7 +29,7 @@ Reset first-sentence flag khi agent bắt đầu trả lời mới:
 Streaming endpoint (POST /stream_api):
   Request  JSON: { text, language, num_step, instruct?, voice_id?, ref_audio?, ref_text? }
   Response      : StreamingResponse, media_type="audio/pcm",
-                  raw int16 PCM tại 24 kHz mono, chia thành chunk 4 KB.
+                  raw int16 PCM at 24 kHz mono, chunked into 4 KB pieces.
 """
 
 from __future__ import annotations
@@ -48,21 +48,19 @@ from livekit.agents import (
 )
 from core.providers_registry.tts.tts_normalizer import normalize_for_tts
 
-# ── Hằng số ───────────────────────────────────────────────────────────────────
+# ── Constants ────────────────────────────────────────────────────────────────
 
-DEFAULT_MODAL_TTS_URL = (
-    "https://nguyentatchien0122--omnivoice-omnivoiceservice-api.modal.run"
-)
+DEFAULT_PAI_EAS_TTS_URL = ""  # Set via PAI_EAS_TTS_URL env var
 DEFAULT_REF_TEXT = ""
 
-logger = logging.getLogger("modal-tts")
+logger = logging.getLogger("pai-eas-tts")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _load_ref_audio(path: str | None) -> str | None:
-    """Đọc file âm thanh clone voice, encode base64 để gửi lên Modal."""
-    resolved = path or os.getenv("MODAL_TTS_REF_AUDIO_PATH", "clone.mp3")
+    """Load voice clone audio file, encode to base64 for PAI-EAS upload."""
+    resolved = path or os.getenv("PAI_EAS_TTS_REF_AUDIO_PATH", "clone.mp3")
     if os.path.isfile(resolved):
         with open(resolved, "rb") as f:
             data = f.read()
@@ -72,30 +70,30 @@ def _load_ref_audio(path: str | None) -> str | None:
     return None
 
 
-# ── Plugin chính ──────────────────────────────────────────────────────────────
+# ── Main Plugin ──────────────────────────────────────────────────────────────
 
-class ModalTTS(tts.TTS):
+class PaiEasTTS(tts.TTS):
     """
-    LiveKit TTS plugin gọi Modal-deployed OmniVoice endpoint.
+    LiveKit TTS plugin calling Alibaba Cloud PAI-EAS deployed OmniVoice endpoint.
 
-    Hỗ trợ hai chế độ:
-    - Câu đầu trong lượt (first-in-turn): dùng num_step_first (ít bước → nhanh)
-    - Các câu tiếp theo:                  dùng num_step đầy đủ  (chất lượng cao)
+    Supports two modes:
+    - First sentence in turn (first-in-turn): uses num_step_first (fewer steps -> faster)
+    - Subsequent sentences:                   uses full num_step (higher quality)
 
-    Gọi reset_turn() khi agent bắt đầu suy nghĩ để kích hoạt lại first-in-turn.
+    Call reset_turn() when agent starts thinking to re-enable first-in-turn mode.
 
     Args:
-        url:             URL gốc của Modal endpoint (mặc định env MODAL_TTS_URL).
-        stream_url:      URL /stream_api cụ thể (mặc định env MODAL_TTS_STREAM_URL, fallback url).
-        language:        Mã ngôn ngữ ("vi", "en", …).
-        num_step:        Số diffusion step cho các câu thường (chất lượng cao hơn).
-        num_step_first:  Số diffusion step cho câu đầu (ít hơn → latency thấp hơn).
-        instruct:        Chuỗi điều khiển giọng (vd: "female,Very Low Pitch").
-        voice_id:        ID giọng đọc định sẵn trên server.
-        ref_audio_path:  Đường dẫn file âm thanh mẫu để clone giọng.
-        ref_text:        Transcript của ref_audio (dùng kèm ref_audio).
-        sample_rate:     Sample rate đầu ra (mặc định 24 000 Hz).
-        num_channels:    Số kênh (mặc định 1 — mono).
+        url:             Base PAI-EAS endpoint URL (defaults to env PAI_EAS_TTS_URL).
+        stream_url:      Specific /stream_api URL (defaults to env PAI_EAS_TTS_STREAM_URL, fallback to url).
+        language:        Language code ("vi", "en", ...).
+        num_step:        Diffusion steps for regular sentences (higher quality).
+        num_step_first:  Diffusion steps for first sentence (fewer -> lower latency).
+        instruct:        Voice control string (e.g., "female,Very Low Pitch").
+        voice_id:        Preset voice ID on server.
+        ref_audio_path:  Path to reference audio file for voice cloning.
+        ref_text:        Transcript of ref_audio (used with ref_audio).
+        sample_rate:     Output sample rate (default 24,000 Hz).
+        num_channels:    Number of channels (default 1 — mono).
     """
 
     def __init__(
@@ -121,10 +119,10 @@ class ModalTTS(tts.TTS):
             sample_rate=sample_rate,
             num_channels=num_channels,
         )
-        self._url = url or os.getenv("MODAL_TTS_URL", DEFAULT_MODAL_TTS_URL)
+        self._url = url or os.getenv("PAI_EAS_TTS_URL", DEFAULT_PAI_EAS_TTS_URL)
         self._stream_url = (
             stream_url
-            or os.getenv("MODAL_TTS_STREAM_URL")
+            or os.getenv("PAI_EAS_TTS_STREAM_URL")
             or self._url
         )
         self._language = language
@@ -138,7 +136,7 @@ class ModalTTS(tts.TTS):
         self._http_session: aiohttp.ClientSession | None = None
 
     def reset_turn(self) -> None:
-        """Reset first-sentence flag. Gọi đầu mỗi lượt phản hồi của agent."""
+        """Reset first-sentence flag. Call at the start of each agent response turn."""
         self._first_in_turn = True
 
     async def _get_session(self) -> aiohttp.ClientSession:
@@ -160,7 +158,7 @@ class ModalTTS(tts.TTS):
         text: str,
         *,
         conn_options: APIConnectOptions | None = None,
-    ) -> "ModalChunkedStream":
+    ) -> "PaiEasChunkedStream":
         if self._first_in_turn:
             num_step = self._num_step_first
             self._first_in_turn = False
@@ -168,7 +166,7 @@ class ModalTTS(tts.TTS):
             num_step = self._num_step
         # Normalize numbers → Vietnamese words for TTS, original text unchanged
         spoken_text = normalize_for_tts(text)
-        return ModalChunkedStream(
+        return PaiEasChunkedStream(
             tts=self,
             input_text=spoken_text,
             conn_options=conn_options or DEFAULT_API_CONNECT_OPTIONS,
@@ -176,13 +174,13 @@ class ModalTTS(tts.TTS):
         )
 
 
-class ModalChunkedStream(tts.ChunkedStream):
-    """Streams raw int16 PCM chunks từ Modal /stream_api."""
+class PaiEasChunkedStream(tts.ChunkedStream):
+    """Streams raw int16 PCM chunks from PAI-EAS /stream_api."""
 
     def __init__(
         self,
         *,
-        tts: "ModalTTS",
+        tts: "PaiEasTTS",
         input_text: str,
         conn_options: APIConnectOptions,
         num_step: int,
@@ -191,7 +189,7 @@ class ModalChunkedStream(tts.ChunkedStream):
         self._num_step = num_step
 
     async def _run(self, output_emitter: tts.AudioEmitter) -> None:  # type: ignore[override]
-        tts_inst: ModalTTS = self._tts  # type: ignore[assignment]
+        tts_inst: PaiEasTTS = self._tts  # type: ignore[assignment]
 
         payload: dict = {
             "text": self.input_text,
