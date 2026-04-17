@@ -1,0 +1,254 @@
+{
+  "flow_id": "intake_form",
+  "name": "Patient Intake Form",
+  "version": 1,
+  "created_at": "2026-04-14T04:46:00",
+  "settings": {
+    "language": "en",
+    "max_retries": 3,
+    "tts_voice": ""
+  },
+  "cell_mapping": {
+    "full_name":        "IntakeForm!B3",
+    "date_of_birth":    "IntakeForm!B5",
+    "gender":           "IntakeForm!B7",
+    "id_number":        "IntakeForm!B9",
+    "phone_number":     "IntakeForm!B11",
+    "address":          "IntakeForm!B13",
+    "reason_for_visit": "IntakeForm!B15"
+  },
+  "nodes": [
+    {
+      "id": "node_start",
+      "type": "start",
+      "name": "Start",
+      "position": {"x": 400, "y": 0},
+      "prompt": "",
+      "outputs": ["next"],
+      "config": {
+        "flow_name": "Patient Intake Form",
+        "language": "en"
+      }
+    },
+    {
+      "id": "node_greeting",
+      "type": "greeting",
+      "name": "Greeting",
+      "position": {"x": 400, "y": 150},
+      "prompt": "Hello! Welcome to the patient intake service. I will help you complete your registration form. This will only take a few minutes.",
+      "outputs": ["next"],
+      "config": {}
+    },
+    {
+      "id": "node_collect_full_name",
+      "type": "collect",
+      "name": "Collect Full Name",
+      "position": {"x": 400, "y": 300},
+      "prompt": "Could you please tell me your full name?",
+      "outputs": ["collected", "retry", "escalate"],
+      "config": {
+        "field_id": "full_name",
+        "field_type": "text",
+        "cell": "IntakeForm!B3",
+        "validation": {
+          "required": true,
+          "min_length": 2
+        },
+        "retry_limit": 3
+      }
+    },
+    {
+      "id": "node_collect_date_of_birth",
+      "type": "collect",
+      "name": "Collect Date of Birth",
+      "position": {"x": 400, "y": 450},
+      "prompt": "Thank you. What is your date of birth? Please provide it in day, month, year format.",
+      "outputs": ["collected", "retry", "escalate"],
+      "config": {
+        "field_id": "date_of_birth",
+        "field_type": "date",
+        "cell": "IntakeForm!B5",
+        "validation": {
+          "required": true
+        },
+        "retry_limit": 3
+      }
+    },
+    {
+      "id": "node_collect_gender",
+      "type": "collect",
+      "name": "Collect Gender",
+      "position": {"x": 400, "y": 600},
+      "prompt": "What is your gender? Please say Male, Female, or Other.",
+      "outputs": ["collected", "retry", "escalate"],
+      "config": {
+        "field_id": "gender",
+        "field_type": "select",
+        "cell": "IntakeForm!B7",
+        "validation": {
+          "required": true,
+          "options": ["Male", "Female", "Other"]
+        },
+        "retry_limit": 3
+      }
+    },
+    {
+      "id": "node_collect_id_number",
+      "type": "collect",
+      "name": "Collect ID Number",
+      "position": {"x": 400, "y": 750},
+      "prompt": "Please provide your national ID number.",
+      "outputs": ["collected", "retry", "escalate"],
+      "config": {
+        "field_id": "id_number",
+        "field_type": "text",
+        "cell": "IntakeForm!B9",
+        "validation": {
+          "required": true,
+          "min_length": 9,
+          "max_length": 12
+        },
+        "retry_limit": 3
+      }
+    },
+    {
+      "id": "node_collect_phone_number",
+      "type": "collect",
+      "name": "Collect Phone Number",
+      "position": {"x": 400, "y": 900},
+      "prompt": "What is your phone number so we can contact you?",
+      "outputs": ["collected", "retry", "escalate"],
+      "config": {
+        "field_id": "phone_number",
+        "field_type": "phone",
+        "cell": "IntakeForm!B11",
+        "validation": {
+          "required": true
+        },
+        "retry_limit": 3
+      }
+    },
+    {
+      "id": "node_collect_address",
+      "type": "collect",
+      "name": "Collect Address",
+      "position": {"x": 400, "y": 1050},
+      "prompt": "What is your current residential address?",
+      "outputs": ["collected", "retry", "escalate"],
+      "config": {
+        "field_id": "address",
+        "field_type": "text",
+        "cell": "IntakeForm!B13",
+        "validation": {
+          "required": true,
+          "min_length": 5
+        },
+        "retry_limit": 3
+      }
+    },
+    {
+      "id": "node_collect_reason",
+      "type": "collect",
+      "name": "Collect Reason for Visit",
+      "position": {"x": 400, "y": 1200},
+      "prompt": "Finally, could you briefly describe the reason for your visit today?",
+      "outputs": ["collected", "retry", "escalate"],
+      "config": {
+        "field_id": "reason_for_visit",
+        "field_type": "text",
+        "cell": "IntakeForm!B15",
+        "validation": {
+          "required": true,
+          "min_length": 3
+        },
+        "retry_limit": 3
+      }
+    },
+    {
+      "id": "node_confirm",
+      "type": "confirm",
+      "name": "Confirm Information",
+      "position": {"x": 400, "y": 1350},
+      "prompt": "Let me confirm your information: Full name: {field.full_name}, Date of birth: {field.date_of_birth}, Gender: {field.gender}, ID number: {field.id_number}, Phone: {field.phone_number}, Address: {field.address}, Reason: {field.reason_for_visit}. Is everything correct? Please say yes to confirm or no to make changes.",
+      "outputs": ["confirmed", "rejected"],
+      "config": {
+        "summary_fields": ["full_name", "date_of_birth", "gender", "id_number", "phone_number", "address", "reason_for_visit"],
+        "confirm_port": "confirmed",
+        "reject_port": "rejected"
+      }
+    },
+    {
+      "id": "node_fill_excel",
+      "type": "fill_excel",
+      "name": "Fill Excel Form",
+      "position": {"x": 400, "y": 1500},
+      "prompt": "",
+      "outputs": ["done", "error"],
+      "config": {
+        "template_path": "examples/intake_form.xlsx",
+        "output_path": "filled/intake_form_{session_id}.xlsx"
+      }
+    },
+    {
+      "id": "node_escalate",
+      "type": "escalate",
+      "name": "Escalate to Human Agent",
+      "position": {"x": 750, "y": 750},
+      "prompt": "I am sorry for the difficulty. Let me connect you to a human agent who can assist you further. Please hold.",
+      "outputs": ["next"],
+      "config": {
+        "reason_template": "Caller was unable to provide required information after maximum retries.",
+        "notify_log": true
+      }
+    },
+    {
+      "id": "node_end",
+      "type": "end",
+      "name": "End",
+      "position": {"x": 400, "y": 1650},
+      "prompt": "Thank you for completing your patient intake form. Your information has been recorded successfully. Have a great day!",
+      "outputs": [],
+      "config": {}
+    }
+  ],
+  "edges": [
+    {"id": "e_start_greeting",                   "source": "node_start",                 "target": "node_greeting",              "output": "next"},
+    {"id": "e_greeting_collect_full_name",        "source": "node_greeting",              "target": "node_collect_full_name",     "output": "next"},
+
+    {"id": "e_full_name_collected",               "source": "node_collect_full_name",     "target": "node_collect_date_of_birth", "output": "collected"},
+    {"id": "e_full_name_retry",                   "source": "node_collect_full_name",     "target": "node_collect_full_name",     "output": "retry"},
+    {"id": "e_full_name_escalate",                "source": "node_collect_full_name",     "target": "node_escalate",              "output": "escalate"},
+
+    {"id": "e_dob_collected",                     "source": "node_collect_date_of_birth", "target": "node_collect_gender",        "output": "collected"},
+    {"id": "e_dob_retry",                         "source": "node_collect_date_of_birth", "target": "node_collect_date_of_birth", "output": "retry"},
+    {"id": "e_dob_escalate",                      "source": "node_collect_date_of_birth", "target": "node_escalate",              "output": "escalate"},
+
+    {"id": "e_gender_collected",                  "source": "node_collect_gender",        "target": "node_collect_id_number",     "output": "collected"},
+    {"id": "e_gender_retry",                      "source": "node_collect_gender",        "target": "node_collect_gender",        "output": "retry"},
+    {"id": "e_gender_escalate",                   "source": "node_collect_gender",        "target": "node_escalate",              "output": "escalate"},
+
+    {"id": "e_id_collected",                      "source": "node_collect_id_number",     "target": "node_collect_phone_number",  "output": "collected"},
+    {"id": "e_id_retry",                          "source": "node_collect_id_number",     "target": "node_collect_id_number",     "output": "retry"},
+    {"id": "e_id_escalate",                       "source": "node_collect_id_number",     "target": "node_escalate",              "output": "escalate"},
+
+    {"id": "e_phone_collected",                   "source": "node_collect_phone_number",  "target": "node_collect_address",       "output": "collected"},
+    {"id": "e_phone_retry",                       "source": "node_collect_phone_number",  "target": "node_collect_phone_number",  "output": "retry"},
+    {"id": "e_phone_escalate",                    "source": "node_collect_phone_number",  "target": "node_escalate",              "output": "escalate"},
+
+    {"id": "e_address_collected",                 "source": "node_collect_address",       "target": "node_collect_reason",        "output": "collected"},
+    {"id": "e_address_retry",                     "source": "node_collect_address",       "target": "node_collect_address",       "output": "retry"},
+    {"id": "e_address_escalate",                  "source": "node_collect_address",       "target": "node_escalate",              "output": "escalate"},
+
+    {"id": "e_reason_collected",                  "source": "node_collect_reason",        "target": "node_confirm",               "output": "collected"},
+    {"id": "e_reason_retry",                      "source": "node_collect_reason",        "target": "node_collect_reason",        "output": "retry"},
+    {"id": "e_reason_escalate",                   "source": "node_collect_reason",        "target": "node_escalate",              "output": "escalate"},
+
+    {"id": "e_confirm_confirmed",                 "source": "node_confirm",               "target": "node_fill_excel",            "output": "confirmed"},
+    {"id": "e_confirm_rejected",                  "source": "node_confirm",               "target": "node_collect_full_name",     "output": "rejected"},
+
+    {"id": "e_fill_excel_done",                   "source": "node_fill_excel",            "target": "node_end",                   "output": "done"},
+    {"id": "e_fill_excel_error",                  "source": "node_fill_excel",            "target": "node_escalate",              "output": "error"},
+
+    {"id": "e_escalate_end",                      "source": "node_escalate",              "target": "node_end",                   "output": "next"}
+  ]
+}

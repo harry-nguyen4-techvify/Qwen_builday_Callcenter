@@ -1,0 +1,21 @@
+region              = "ap-southeast-7"
+environment         = "dev"
+
+# Domain configuration
+# Option 1: Leave empty to use sslip.io (free, no domain needed)
+# domain_name       = ""
+# Option 2: Use your own domain (must be managed by Alibaba Cloud DNS)
+# domain_name       = "yourdomain.com"
+
+livekit_subdomain   = "livekit"
+turn_subdomain      = "turn"
+
+# Generate with: openssl rand -hex 18
+livekit_api_key     = "CHANGE_ME"
+# Generate with: openssl rand -hex 32
+livekit_api_secret  = "CHANGE_ME"
+
+instance_type       = "ecs.c7.xlarge"
+image_id            = "ubuntu_22_04_x64_20G_alibase_20240101.vhd"
+ssh_public_key_path = "~/.ssh/livekit-key.pub"
+eip_bandwidth       = 5
