@@ -99,12 +99,12 @@ LIVEKIT_URL=wss://your-project.livekit.cloud
 LIVEKIT_API_KEY=your_api_key
 LIVEKIT_API_SECRET=your_api_secret
 
-# LLM Configuration (for flow compilation)
+# LLM Configuration (for flow compilation and conversation)
 FLOW_DESIGNER_API_KEY=your_dashscope_key
-FLOW_DESIGNER_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-FLOW_DESIGNER_MODEL=qwen3
+FLOW_DESIGNER_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+FLOW_DESIGNER_MODEL=qwen3-max
 
-# Translation (optional)
+# Translation (optional, for VI → EN)
 DASHSCOPE_API_KEY=your_dashscope_key
 QWEN_TRANSLATE_MODEL=qwen-mt-flash
 QWEN_TRANSLATE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
@@ -115,19 +115,11 @@ QWEN_TRANSLATE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 ### Start All Services
 
 ```bash
-# Terminal 1: Start the API server
+# Terminal 1: Start the API server (includes LiveKit agent)
 uvicorn api.main:app --reload --port 8000
 
-# Terminal 2: Start the LiveKit agent worker
-python main.py dev
-
-# Terminal 3: Start the frontend
+# Terminal 2: Start the frontend
 cd frontend && npm run dev
-```
-
-Or use the start script:
-```bash
-./start.sh
 ```
 
 ### Access Points
@@ -147,18 +139,14 @@ Or use the start script:
 
 ### 2. Test with Phone Simulator
 
-1. Go to the Calls page
+1. Go to the Calls page (http://localhost:5173/calls)
 2. Click "New Call" to start a simulated call
 3. Grant microphone permission
 4. Speak with the AI agent to fill the form
 
-### 3. Compile a Flow (CLI)
+### 3. Compile a Flow
 
-```bash
-python main.py compile <flow_id>
-```
-
-This generates a `.compiled.json` file with the optimized system prompt.
+Flows are compiled automatically via the `/api/design` endpoint when generated through the Flow Designer. The compilation uses LLM to transform JSON flow definitions into optimized system prompts.
 
 ## API Endpoints
 
@@ -180,34 +168,65 @@ This generates a `.compiled.json` file with the optimized system prompt.
 
 ```
 ├── api/
-│   └── main.py              # FastAPI application
+│   └── main.py                   # FastAPI application (REST + SSE)
 ├── core/
 │   ├── agents/
-│   │   └── prompt_form_agent.py  # Main voice agent
+│   │   ├── prompt_form_agent.py  # Main voice agent (LiveKit)
+│   │   └── simple_agent.py       # Simplified agent variant
 │   ├── compiler/
-│   │   ├── flow_compiler.py      # JSON → compiled prompt
+│   │   ├── flow_compiler.py      # JSON → compiled prompt (LLM)
 │   │   └── models.py             # FieldSpec, CompiledFlowSpec
-│   ├── db/                       # Database models
-│   ├── events/                   # SSE broadcasters
-│   ├── excel/                    # Excel parsing/filling
-│   ├── models/                   # Pydantic models
-│   ├── runtime/                  # Validation engine
-│   └── translation/              # Qwen translation service
-├── flows/                        # Flow JSON files
-├── frontend/                     # React dashboard
-├── templates/                    # Excel templates
-├── main.py                       # Agent worker entrypoint
-└── requirements.txt
-```
-
-## Testing
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=core --cov-report=html
+│   ├── db/
+│   │   ├── base.py               # SQLAlchemy async setup
+│   │   ├── models/               # ORM models (call, agent, customer, etc.)
+│   │   └── seed_credits.py       # Database seeding
+│   ├── designer/
+│   │   └── flow_designer.py      # LLM-powered flow generation
+│   ├── escalation/
+│   │   └── human_stub.py         # Human operator handoff
+│   ├── events/
+│   │   ├── call_broadcaster.py       # Call status SSE
+│   │   ├── form_broadcaster.py       # Form state SSE
+│   │   ├── transcript_broadcaster.py # Transcript SSE
+│   │   └── transcript_persister.py   # Transcript DB persistence
+│   ├── excel/
+│   │   ├── parser.py             # Excel template parsing
+│   │   └── filler.py             # Excel output generation
+│   ├── models/                   # Pydantic models (events, nodes, flow)
+│   ├── providers_registry/
+│   │   ├── stt/                  # Speech-to-text (GIPFormer)
+│   │   └── tts/                  # Text-to-speech (Custom, gTTS)
+│   ├── runtime/
+│   │   └── validation.py         # Field validation engine
+│   ├── store/
+│   │   └── flow_store.py         # Flow persistence
+│   └── translation/
+│       ├── qwen_translator.py    # Qwen translation service
+│       └── cache.py              # Translation caching
+├── examples/
+│   ├── flow_example.json         # Sample flow definition
+│   ├── design_flow.py            # Flow design script
+│   └── batch_phones.csv          # Batch call sample
+├── frontend/
+│   ├── src/
+│   │   ├── pages/                # React pages
+│   │   │   ├── Analytics.tsx         # Dashboard metrics
+│   │   │   ├── CallsPage.tsx         # Call history/management
+│   │   │   ├── CallTranscriptPage.tsx # Transcript viewer
+│   │   │   ├── FlowDesigner.tsx      # Visual node editor
+│   │   │   ├── LiveCallConsole.tsx   # Real-time call monitor
+│   │   │   ├── OperatorJoin.tsx      # Human escalation join
+│   │   │   └── PhoneSimulator.tsx    # Test phone interface
+│   │   ├── components/           # Reusable UI components
+│   │   ├── hooks/                # React hooks (LiveKit, SSE)
+│   │   └── nodes/                # Flow node components
+│   └── package.json
+├── terraform/
+│   ├── environments/             # dev, prod configurations
+│   ├── modules/                  # compute, network, dns, lb
+│   └── README.md
+├── requirements.txt
+└── start.sh                      # Quick start script
 ```
 
 ## Development
@@ -220,7 +239,7 @@ pytest --cov=core --cov-report=html
 
 ### Creating Custom Flows
 
-Flows are stored as JSON in the `flows/` directory. Example structure:
+Flows are stored in the database and managed via the API. See `examples/flow_example.json` for the JSON structure:
 
 ```json
 {
@@ -235,14 +254,9 @@ Flows are stored as JSON in the `flows/` directory. Example structure:
 }
 ```
 
+You can also design flows programmatically using `examples/design_flow.py`.
+
 ## Deployment
-
-### Docker (Local)
-
-```bash
-docker build -t voice-form-agent .
-docker run -p 8000:8000 --env-file .env voice-form-agent
-```
 
 ### LiveKit Cloud (Managed)
 
@@ -309,7 +323,7 @@ For detailed instructions, see [terraform/README.md](terraform/README.md).
 ### Agent Not Responding
 
 1. Check LiveKit connection: `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`
-2. Verify agent worker is running: `python main.py dev`
+2. Verify API server is running: `uvicorn api.main:app --reload --port 8000`
 3. Check browser microphone permissions
 
 ### Compilation Errors
