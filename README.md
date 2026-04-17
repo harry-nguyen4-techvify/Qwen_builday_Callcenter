@@ -1,6 +1,6 @@
 # Voice Form-Filling Agent
 
-An AI-powered voice agent system that collects form data through natural conversation. Built with LiveKit Agents, OpenAI/Qwen LLMs, and a React-based dashboard for call center operations.
+An AI-powered voice agent system that collects form data through natural conversation. Built with LiveKit Agents, Qwen LLMs, and a React-based dashboard for call center operations.
 
 ## Features
 
@@ -12,24 +12,33 @@ An AI-powered voice agent system that collects form data through natural convers
 - **Human Escalation**: Seamless handoff to human operators with hold music
 - **Phone Simulator**: Test flows with a browser-based phone interface
 
-## Architecture
+## Screenshots
 
-Two-layer architecture: **design-time** (UI → compiled prompt) and **runtime** (single agent with tools).
+### Call History
+Monitor active calls and review history with real-time status updates.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Design Time                              │
-│  UI Node Editor → JSON Flow → FlowCompiler → CompiledFlowSpec   │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                          Runtime                                 │
-│  PromptFormAgent(spec)                                          │
-│    └── instructions: LLM-generated system prompt                │
-│    └── tools: fill_field, confirm_data, submit_form, escalate   │
-│    └── state: FormStep (updated only via tools)                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+![Call History](assets/02-calls-history.png)
+
+### Flow Designer
+Visual node-based editor to design conversation flows without coding.
+
+![Flow Designer](assets/03-flow-designer.png)
+
+### Call Transcript
+View call transcripts with Vietnamese → English translation.
+
+![Call Transcript](assets/05-call-transcript.png)
+
+### Analytics Dashboard
+Real-time call center metrics: volume trends, status breakdown, queue performance.
+
+![Analytics](assets/06-analytics.png)
+
+### Live Call with Escalation
+Real-time transcript during active call with human escalation support.
+
+![Live Call](assets/Screenshot%202026-04-17%20165305.png)
+
 
 ## Tech Stack
 
